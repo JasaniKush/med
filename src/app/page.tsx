@@ -15,7 +15,7 @@ export default function Home() {
   const [formKey, setFormKey] = useState(Date.now());
 
   const handleStartNew = () => {
-    setFormKey(Date.now()); // Resets the form by changing its key
+    setFormKey(Date.now()); // Resets the component state by changing its key
   };
 
   const showReport = formState?.status === 'success' && formState.report;
@@ -26,12 +26,11 @@ export default function Home() {
     <div className="flex flex-col items-center min-h-screen bg-background p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-4xl">
         <Header />
-        <main className="mt-8">
+        <main className="mt-8" key={formKey}>
           <Card className="bg-card/50 backdrop-blur-sm">
             <CardContent className="p-6">
               {showForm && (
                 <form
-                  key={formKey}
                   action={(formData) => startTransition(() => formAction(formData))}
                 >
                   <FileUploadForm isPending={isPending} />

@@ -23,19 +23,53 @@ interface ReportDisplayProps {
 export function ReportDisplay({ report, extractedText, audioDataUri, onStartNew }: ReportDisplayProps) {
   const { toast } = useToast();
 
-  const handleSave = () => {
-    toast({
-      title: "Feature Coming Soon",
-      description: "Saving reports will be available after optional login.",
-    });
+  const downloadReportAsJson = () => {
+    try {
+      const dataToSave = {
+        report,
+        extractedText,
+      };
+      const jsonString = JSON.stringify(dataToSave, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      link.download = `medicare-report-${timestamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      return true;
+    } catch (error) {
+      console.error("Failed to download report:", error);
+      toast({
+        variant: "destructive",
+        title: "Download Failed",
+        description: "There was an issue preparing your report for download.",
+      });
+      return false;
+    }
   };
 
-   const handleDownload = () => {
-    toast({
-      title: "Feature Coming Soon",
-      description: "Downloading reports will be implemented in a future version.",
-    });
+  const handleSave = () => {
+    if (downloadReportAsJson()) {
+      toast({
+        title: "Report Saved",
+        description: "Your report has been downloaded as a JSON file.",
+      });
+    }
   };
+
+  const handleDownload = () => {
+    if (downloadReportAsJson()) {
+      toast({
+        title: "Report Downloaded",
+        description: "Your report has been saved as a JSON file.",
+      });
+    }
+  };
+
 
   return (
     <div className="space-y-8">
