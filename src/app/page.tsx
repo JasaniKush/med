@@ -1,17 +1,16 @@
 'use client';
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useActionState } from 'react';
 import { Header } from '@/components/medbuddy/Header';
 import { FileUploadForm } from '@/components/medbuddy/FileUploadForm';
 import { ReportDisplay } from '@/components/medbuddy/ReportDisplay';
 import { InitialState, generateReport } from '@/app/actions';
-import { useFormState } from 'react-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
-  const [formState, formAction] = useFormState(generateReport, null);
+  const [formState, formAction] = useActionState(generateReport, null);
   const [isPending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(Date.now());
 
