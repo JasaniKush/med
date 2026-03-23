@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useTransition, useActionState } from 'react';
+import React, { useTransition, useActionState } from 'react';
 import { Header } from '@/components/medbuddy/Header';
 import { FileUploadForm } from '@/components/medbuddy/FileUploadForm';
 import { ReportDisplay } from '@/components/medbuddy/ReportDisplay';
@@ -12,11 +12,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function Home() {
   const [formState, formAction] = useActionState(generateReport, null);
   const [isPending, startTransition] = useTransition();
-  const [formKey, setFormKey] = useState(Date.now());
-
-  const handleStartNew = () => {
-    setFormKey(Date.now()); // Resets the component state by changing its key
-  };
 
   const showReport = formState?.status === 'success' && formState.report;
   const showForm = !showReport && !isPending;
@@ -26,7 +21,7 @@ export default function Home() {
     <div className="flex flex-col items-center min-h-screen bg-background p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-4xl">
         <Header />
-        <main className="mt-8" key={formKey}>
+        <main className="mt-8">
           <Card className="bg-card/50 backdrop-blur-sm">
             <CardContent className="p-6">
               {showForm && (
@@ -42,7 +37,6 @@ export default function Home() {
                   report={formState.report!}
                   extractedText={formState.extractedText!}
                   audioDataUri={formState.audioDataUri!}
-                  onStartNew={handleStartNew}
                 />
               )}
               {showError && (

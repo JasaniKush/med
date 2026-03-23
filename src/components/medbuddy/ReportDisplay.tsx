@@ -4,8 +4,10 @@ import { MedicationTable } from "./MedicationTable";
 import { ComparisonTable } from "./ComparisonTable";
 import { VoiceOutputPlayer } from "./VoiceOutputPlayer";
 import { Button } from "../ui/button";
-import { Download, Save, FilePlus, AlertCircle } from "lucide-react";
+import { Download, FilePlus, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   Accordion,
   AccordionContent,
@@ -17,57 +19,152 @@ interface ReportDisplayProps {
   report: Report;
   extractedText: string;
   audioDataUri: string;
-  onStartNew: () => void;
 }
 
-export function ReportDisplay({ report, extractedText, audioDataUri, onStartNew }: ReportDisplayProps) {
+export function ReportDisplay({ report, extractedText, audioDataUri }: ReportDisplayProps) {
   const { toast } = useToast();
 
-  const downloadReportAsJson = () => {
+  const downloadReportAsPdf = () => {
     try {
-      const dataToSave = {
-        report,
-        extractedText,
-      };
-      const jsonString = JSON.stringify(dataToSave, null, 2);
-      const blob = new Blob([jsonString], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      link.download = `medicare-report-${timestamp}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      return true;
+        const doc = new jsPDF();
+        const pageHeight = doc.internal.pageSize.height;
+        let y = 20;
+
+        const addSection = (title: string, content: () => void, isLast = false) => {
+            const contentHeight = pageHeight - 40;
+            if (y > contentHeight) {
+                doc.addPage();
+                y = 20;
+            }
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text(title, 15, y);
+            y += 2;
+            doc.setDrawColor(220, 220, 220);
+            doc.line(15, y, 195, y);
+            y += 8;
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            content();
+            if (!isLast) {
+              y += 5;
+            }
+        };
+
+        doc.setFontSize(22);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Your Simplified Report', 105, y, { align: 'center' });
+        y += 20;
+
+        addSection('One-line Family Summary', () => {
+            doc.setFont('helvetica', 'italic');
+            const text = `"${report.family_summary}"`;
+            const splitText = doc.splitTextToSize(text, 180);
+            doc.text(splitText, 15, y);
+            y += (splitText.length * 5) + 5;
+        });
+        
+        addSection('Plain-language Diagnosis', () => {
+            const text = report.plain_language_diagnosis;
+            const splitText = doc.splitTextToSize(text, 180);
+            doc.text(splitText, 15, y);
+            y += (splitText.length * 5) + 5;
+        });
+
+        addSection('Medication Schedule', () => {
+            if (report.medication_schedule.length > 0) {
+                autoTable(doc, {
+                    startY: y,
+                    head: [['Medicine', 'Dosage', 'Timing', 'Duration']],
+                    body: report.medication_schedule.map(med => [med.medicine_name, med.dosage, med.timing, med.days]),
+                    theme: 'striped',
+                    headStyles: { fillColor: [46, 115, 184] }, // primary color
+                    didDrawPage: (data) => {
+                        y = data.cursor?.y ?? 0;
+                    }
+                });
+                y = (doc as any).lastAutoTable.finalY + 10;
+            } else {
+                doc.text('No medication schedule found in the document.', 15, y);
+                y += 10;
+            }
+        });
+
+        addSection('Follow-up Checklist', () => {
+             if (report.follow_up_checklist.length > 0 && report.follow_up_checklist[0] !== "Not clearly mentioned in the document.") {
+                report.follow_up_checklist.forEach(item => {
+                    const splitText = doc.splitTextToSize(`• ${item}`, 175);
+                    doc.text(splitText, 15, y);
+                    y+= (splitText.length * 5) + 2;
+                });
+             } else {
+                doc.text('No follow-up instructions found.', 15, y);
+                y+=10;
+             }
+        });
+
+        addSection('Side Effect Alerts', () => {
+            if (report.side_effect_alerts.length > 0 && report.side_effect_alerts[0] !== "Not clearly mentioned in the document.") {
+                 report.side_effect_alerts.forEach(alert => {
+                    const splitText = doc.splitTextToSize(`• ${alert}`, 175);
+                    doc.text(splitText, 15, y);
+                    y += (splitText.length * 5) + 2;
+                });
+            } else {
+                 doc.text('No side effects were explicitly mentioned in the document.', 15, y);
+                 y+=10;
+            }
+        });
+
+        addSection('Original vs. Simple Explanation', () => {
+             if (report.comparison.length > 0) {
+                autoTable(doc, {
+                    startY: y,
+                    head: [['Original Medical Term', 'Simple Explanation']],
+                    body: report.comparison.map(item => [item.original, item.simple]),
+                    theme: 'grid',
+                    headStyles: { fillColor: [46, 115, 184] }, // primary color
+                     didDrawPage: (data) => {
+                        y = data.cursor?.y ?? 0;
+                    }
+                });
+                 y = (doc as any).lastAutoTable.finalY + 10;
+            } else {
+                doc.text('No specific medical terms were simplified.', 15, y);
+                y+=10;
+            }
+        });
+        
+        addSection('Extracted Original Text', () => {
+             const text = extractedText;
+             const splitText = doc.splitTextToSize(text, 180);
+             doc.setFont('courier', 'normal');
+             doc.setFontSize(8);
+             doc.text(splitText, 15, y);
+             y += (splitText.length * 3) + 5;
+        }, true);
+
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        doc.save(`medicare-report-${timestamp}.pdf`);
+
+        toast({
+            title: "Report Downloaded",
+            description: "Your report has been downloaded as a PDF file.",
+        });
+
     } catch (error) {
-      console.error("Failed to download report:", error);
-      toast({
-        variant: "destructive",
-        title: "Download Failed",
-        description: "There was an issue preparing your report for download.",
-      });
-      return false;
+        console.error("Failed to download PDF report:", error);
+        toast({
+            variant: "destructive",
+            title: "Download Failed",
+            description: "There was an issue preparing your report for download.",
+        });
     }
   };
 
-  const handleSave = () => {
-    if (downloadReportAsJson()) {
-      toast({
-        title: "Report Saved",
-        description: "Your report has been downloaded as a JSON file.",
-      });
-    }
-  };
-
-  const handleDownload = () => {
-    if (downloadReportAsJson()) {
-      toast({
-        title: "Report Downloaded",
-        description: "Your report has been saved as a JSON file.",
-      });
-    }
+  const handleStartNew = () => {
+    window.location.href = '/';
   };
 
 
@@ -79,15 +176,11 @@ export function ReportDisplay({ report, extractedText, audioDataUri, onStartNew 
       </div>
 
        <div className="flex flex-wrap justify-center gap-2">
-        <Button onClick={handleDownload}>
+        <Button onClick={downloadReportAsPdf}>
           <Download className="mr-2 h-4 w-4" />
           Download Report
         </Button>
-        <Button onClick={handleSave} variant="secondary">
-          <Save className="mr-2 h-4 w-4" />
-          Save Report
-        </Button>
-        <Button onClick={onStartNew} variant="outline">
+        <Button onClick={handleStartNew} variant="outline">
           <FilePlus className="mr-2 h-4 w-4" />
           Start New Upload
         </Button>
