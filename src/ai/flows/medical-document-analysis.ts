@@ -21,10 +21,6 @@ const MedicalDocumentAnalysisInputSchema = z.object({
     .number()
     .optional()
     .describe('Optional patient age to provide context for analysis, not for generating medical advice.'),
-  outputLanguage: z
-    .string()
-    .optional()
-    .describe('Preferred language for the output text, e.g., "English", "Hindi".'),
 });
 export type MedicalDocumentAnalysisInput = z.infer<
   typeof MedicalDocumentAnalysisInputSchema
@@ -171,7 +167,7 @@ Return the cleaned version of the text extracted from the document.
 - Convert into simple, human-friendly explanation
 - DO NOT add extra medical details
 
-Language: {{#if outputLanguage}}{{{outputLanguage}}}{{else}}English{{/if}}
+Language: English
 Patient Age: {{#if patientAge}}{{{patientAge}}} years old{{else}}Not provided{{/if}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -29,7 +29,6 @@ export async function generateReport(
   const documentFile = formData.get('document') as File;
   const capturedImage = formData.get('capturedImage') as string;
   const patientAge = formData.get('patientAge') as string;
-  const outputLanguage = formData.get('outputLanguage') as string;
   const voiceLanguage = formData.get('voiceLanguage') as string;
 
   let documentDataUri: string | null = null;
@@ -58,7 +57,6 @@ export async function generateReport(
     const analysisResult = await medicalDocumentAnalysis({
       documentDataUri,
       patientAge: patientAge ? parseInt(patientAge, 10) : undefined,
-      outputLanguage,
     });
     
     // Check if OCR failed

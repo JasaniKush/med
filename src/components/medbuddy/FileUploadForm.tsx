@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LanguageSelector } from "./LanguageSelector";
-import { OUTPUT_LANGUAGES, VOICE_LANGUAGES } from "@/lib/constants";
+import { VOICE_LANGUAGES } from "@/lib/constants";
 import { Upload, Loader2, FileText, Camera, RefreshCcw, CircleDot } from "lucide-react";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
@@ -213,19 +213,10 @@ export function FileUploadForm({ isPending }: FileUploadFormProps) {
             </TabsContent>
         </Tabs>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="patient-age">Patient Age (Optional)</Label>
           <Input id="patient-age" name="patientAge" type="number" placeholder="e.g., 45" min="0" />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="output-language">Output Language</Label>
-          <LanguageSelector
-            id="output-language"
-            name="outputLanguage"
-            languages={OUTPUT_LANGUAGES}
-            defaultValue="English"
-          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="voice-language">Voice Language</Label>
