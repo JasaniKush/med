@@ -11,49 +11,16 @@ export interface InitialState {
   audioDataUri?: string;
 }
 
-// This is a placeholder. In a real app, this would use OCR/PDF parsing.
-async function extractTextFromDocument(file: File): Promise<string> {
-  // Mocking extraction based on file type for demo purposes
-  if (file.type.startsWith('image/')) {
-    return `
-      Patient Name: Jane Doe
-      Date: 2023-10-27
+// Maximum file size in bytes (5MB)
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+// Allowed file types
+const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 
-      Diagnosis: Acute Bronchitis
-
-      Prescription:
-      1. Azithromycin 500mg - 1 tablet daily for 5 days.
-      2. Ibuprofen 400mg - as needed for fever, max 3 times a day.
-      3. Dextromethorphan syrup - 10ml every 6 hours for cough.
-
-      Side effects: May cause stomach upset.
-      Follow up with Dr. Smith in 1 week if not improving.
-    `;
-  } else if (file.type === 'application/pdf') {
-    return `
-      HOSPITAL DISCHARGE SUMMARY
-
-      PATIENT: John Smith
-      AGE: 68
-      DIAGNOSIS: Myocardial Infarction (Heart Attack)
-
-      TREATMENT:
-      - Aspirin 81mg, one tablet daily.
-      - Atorvastatin 40mg, one tablet at night.
-      - Metoprolol 25mg, twice a day.
-
-      INSTRUCTIONS:
-      - Follow up with Cardiology in 2 weeks.
-      - Low sodium diet.
-      - Monitor blood pressure daily.
-
-      Family Summary: Patient had a heart attack and needs to take new heart medications and change their diet.
-      Medical Term: Myocardial Infarction, simple: Heart Attack.
-    `;
-  }
-  return "Could not extract text. This is a mock response.";
+async function fileToDataUri(file: File): Promise<string> {
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return `data:${file.type};base64,${buffer.toString('base64')}`;
 }
-
 
 export async function generateReport(
   prevState: InitialState | null,
@@ -68,20 +35,32 @@ export async function generateReport(
     return { status: 'error', message: 'Please upload a valid document.' };
   }
 
+  // File type validation
+  if (!ALLOWED_FILE_TYPES.includes(documentFile.type)) {
+      return { status: 'error', message: 'Invalid file format. Please upload a valid PDF, JPG, or PNG file.' };
+  }
+
+  // File size validation
+  if (documentFile.size > MAX_FILE_SIZE) {
+      return { status: 'error', message: 'File size exceeds the 5MB limit.' };
+  }
+
   try {
-    // Step 1: Extract text from the document (mocked)
-    const rawExtractedText = await extractTextFromDocument(documentFile);
-    if (!rawExtractedText) {
-      return { status: 'error', message: 'Failed to extract text from the document.' };
-    }
+    // Step 1: Convert file to data URI
+    const documentDataUri = await fileToDataUri(documentFile);
 
     // Step 2: Analyze the document with the first AI flow
     const analysisResult = await medicalDocumentAnalysis({
-      extractedText: rawExtractedText,
+      documentDataUri,
       patientAge: patientAge ? parseInt(patientAge, 10) : undefined,
       outputLanguage,
     });
     
+    // Check if OCR failed
+    if (analysisResult.extracted_text === "Could not extract text from the document.") {
+        return { status: 'error', message: 'Unable to read document clearly. Please try a different file.' };
+    }
+
     // Step 3: Generate voice summary with the second AI flow
     const hasSufficientDataForAudio = analysisResult.voice_script && analysisResult.voice_script.trim() !== '' && analysisResult.voice_script !== "Not clearly mentioned in the document.";
     
@@ -104,7 +83,6 @@ export async function generateReport(
 
   } catch (error) {
     console.error("Error generating report:", error);
-    // This provides a more generic but safe error message to the user.
     return { status: 'error', message: 'An unexpected error occurred while processing your document. The AI service may be temporarily unavailable.' };
   }
 }

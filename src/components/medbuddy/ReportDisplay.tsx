@@ -60,28 +60,21 @@ export function ReportDisplay({ report, extractedText, audioDataUri, onStartNew 
       </div>
       
       <div className="space-y-6">
-        <ReportSection title="8. Voice Summary">
-            <VoiceOutputPlayer audioDataUri={audioDataUri} />
-        </ReportSection>
-        
-        <ReportSection title="1. Extracted Original Text">
-            <Accordion type="single" collapsible>
-                <AccordionItem value="item-1">
-                    <AccordionTrigger>Click to view original text</AccordionTrigger>
-                    <AccordionContent>
-                        <div className="p-4 bg-secondary/50 rounded-md max-h-60 overflow-y-auto">
-                            <pre className="whitespace-pre-wrap text-sm text-muted-foreground">{extractedText}</pre>
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
+        <ReportSection title="One-line Family Summary">
+          <p className="italic text-lg">"{report.family_summary}"</p>
         </ReportSection>
 
-        <ReportSection title="2. Plain-language Diagnosis">
+        {audioDataUri && (
+          <ReportSection title="Voice Summary">
+              <VoiceOutputPlayer audioDataUri={audioDataUri} />
+          </ReportSection>
+        )}
+        
+        <ReportSection title="Plain-language Diagnosis">
           <p>{report.plain_language_diagnosis}</p>
         </ReportSection>
 
-        <ReportSection title="3. Medication Schedule">
+        <ReportSection title="Medication Schedule">
           {report.medication_schedule.length > 0 ? (
             <MedicationTable medications={report.medication_schedule} />
           ) : (
@@ -89,8 +82,20 @@ export function ReportDisplay({ report, extractedText, audioDataUri, onStartNew 
           )}
         </ReportSection>
 
-        <ReportSection title="4. Side Effect Alerts">
-          {report.side_effect_alerts.length > 0 ? (
+        <ReportSection title="Follow-up Checklist">
+          {report.follow_up_checklist.length > 0 && report.follow_up_checklist[0] !== "Not clearly mentioned in the document." ? (
+            <ul className="list-disc list-inside space-y-1">
+              {report.follow_up_checklist.map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">No follow-up instructions found.</p>
+          )}
+        </ReportSection>
+        
+        <ReportSection title="Side Effect Alerts">
+          {report.side_effect_alerts.length > 0 && report.side_effect_alerts[0] !== "Not clearly mentioned in the document." ? (
             <ul className="list-disc list-inside space-y-1">
               {report.side_effect_alerts.map((alert, index) => (
                 <li key={index} className="flex items-start">
@@ -104,28 +109,25 @@ export function ReportDisplay({ report, extractedText, audioDataUri, onStartNew 
           )}
         </ReportSection>
 
-        <ReportSection title="5. Follow-up Checklist">
-          {report.follow_up_checklist.length > 0 ? (
-            <ul className="list-disc list-inside space-y-1">
-              {report.follow_up_checklist.map((item, index) => (
-                <li key={index}>{item}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground">No follow-up instructions found.</p>
-          )}
-        </ReportSection>
-
-        <ReportSection title="6. One-line Family Summary">
-          <p className="italic">"{report.family_summary}"</p>
-        </ReportSection>
-
-        <ReportSection title="7. Original vs. Simple Explanation">
+        <ReportSection title="Original vs. Simple Explanation">
           {report.comparison.length > 0 ? (
             <ComparisonTable comparisons={report.comparison} />
           ) : (
              <p className="text-muted-foreground">No specific medical terms were simplified.</p>
           )}
+        </ReportSection>
+        
+        <ReportSection title="Extracted Original Text">
+            <Accordion type="single" collapsible>
+                <AccordionItem value="item-1">
+                    <AccordionTrigger>Click to view original text</AccordionTrigger>
+                    <AccordionContent>
+                        <div className="p-4 bg-secondary/50 rounded-md max-h-60 overflow-y-auto">
+                            <pre className="whitespace-pre-wrap text-sm text-muted-foreground">{extractedText}</pre>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
         </ReportSection>
       </div>
 
