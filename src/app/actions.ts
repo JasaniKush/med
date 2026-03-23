@@ -12,8 +12,6 @@ export interface InitialState {
 }
 
 // This is a placeholder. In a real app, this would use OCR/PDF parsing.
-// The user request specified Tesseract and PyMuPDF which cannot run in this Next.js environment.
-// So, we mock the text extraction to allow the AI flows to work.
 async function extractTextFromDocument(file: File): Promise<string> {
   // Mocking extraction based on file type for demo purposes
   if (file.type.startsWith('image/')) {
@@ -72,29 +70,25 @@ export async function generateReport(
 
   try {
     // Step 1: Extract text from the document (mocked)
-    const extractedText = await extractTextFromDocument(documentFile);
-    if (!extractedText) {
+    const rawExtractedText = await extractTextFromDocument(documentFile);
+    if (!rawExtractedText) {
       return { status: 'error', message: 'Failed to extract text from the document.' };
     }
 
     // Step 2: Analyze the document with the first AI flow
     const analysisResult = await medicalDocumentAnalysis({
-      extractedText,
+      extractedText: rawExtractedText,
       patientAge: patientAge ? parseInt(patientAge, 10) : undefined,
       outputLanguage,
     });
     
     // Step 3: Generate voice summary with the second AI flow
-    // A check is added to ensure at least some data exists before generating audio.
-    const hasSufficientDataForAudio = analysisResult.plain_language_diagnosis !== "Not clearly mentioned in the document." || analysisResult.medication_schedule.length > 0;
+    const hasSufficientDataForAudio = analysisResult.voice_script && analysisResult.voice_script.trim() !== '' && analysisResult.voice_script !== "Not clearly mentioned in the document.";
     
     let audioDataUri = "";
     if (hasSufficientDataForAudio) {
         const voiceResult = await generateVoiceSummary({
-            plainLanguageDiagnosis: analysisResult.plain_language_diagnosis,
-            medicationSchedule: analysisResult.medication_schedule,
-            followUpChecklist: analysisResult.follow_up_checklist,
-            familySummary: analysisResult.family_summary,
+            script: analysisResult.voice_script,
             voiceLanguage,
         });
         audioDataUri = voiceResult.audioDataUri;
@@ -104,7 +98,7 @@ export async function generateReport(
     return {
       status: 'success',
       report: analysisResult,
-      extractedText,
+      extractedText: analysisResult.extracted_text, // Use cleaned text from AI
       audioDataUri,
     };
 
