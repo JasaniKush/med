@@ -61,8 +61,8 @@ export default function Home() {
         </main>
       </div>
        <footer className="mt-8 text-center text-muted-foreground text-sm">
-        <p>MedBuddy is an AI-powered tool and does not provide medical advice. Always consult with a qualified healthcare professional.</p>
-        <p>&copy; {new Date().getFullYear()} MedBuddy. For demonstration purposes only.</p>
+        <p>Medicare is an AI-powered tool and does not provide medical advice. Always consult with a qualified healthcare professional.</p>
+        <p>&copy; {new Date().getFullYear()} Medicare. For demonstration purposes only.</p>
       </footer>
     </div>
   );
