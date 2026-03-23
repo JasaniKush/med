@@ -27,27 +27,32 @@ export async function generateReport(
   formData: FormData
 ): Promise<InitialState> {
   const documentFile = formData.get('document') as File;
+  const capturedImage = formData.get('capturedImage') as string;
   const patientAge = formData.get('patientAge') as string;
   const outputLanguage = formData.get('outputLanguage') as string;
   const voiceLanguage = formData.get('voiceLanguage') as string;
 
-  if (!documentFile || documentFile.size === 0) {
-    return { status: 'error', message: 'Please upload a valid document.' };
-  }
-
-  // File type validation
-  if (!ALLOWED_FILE_TYPES.includes(documentFile.type)) {
-      return { status: 'error', message: 'Invalid file format. Please upload a valid PDF, JPG, or PNG file.' };
-  }
-
-  // File size validation
-  if (documentFile.size > MAX_FILE_SIZE) {
-      return { status: 'error', message: 'File size exceeds the 5MB limit.' };
-  }
+  let documentDataUri: string | null = null;
 
   try {
-    // Step 1: Convert file to data URI
-    const documentDataUri = await fileToDataUri(documentFile);
+    if (capturedImage) {
+        documentDataUri = capturedImage;
+    } else if (documentFile && documentFile.size > 0) {
+        // File type validation
+        if (!ALLOWED_FILE_TYPES.includes(documentFile.type)) {
+            return { status: 'error', message: 'Invalid file format. Please upload a valid PDF, JPG, or PNG file.' };
+        }
+
+        // File size validation
+        if (documentFile.size > MAX_FILE_SIZE) {
+            return { status: 'error', message: `File size exceeds the 5MB limit. Your file is ${Math.round(documentFile.size / 1024 / 1024)}MB.` };
+        }
+        documentDataUri = await fileToDataUri(documentFile);
+    }
+
+    if (!documentDataUri) {
+        return { status: 'error', message: 'Please upload a file or capture a photo of your document.' };
+    }
 
     // Step 2: Analyze the document with the first AI flow
     const analysisResult = await medicalDocumentAnalysis({
@@ -58,7 +63,7 @@ export async function generateReport(
     
     // Check if OCR failed
     if (analysisResult.extracted_text === "Could not extract text from the document.") {
-        return { status: 'error', message: 'Unable to read document clearly. Please try a different file.' };
+        return { status: 'error', message: 'Unable to read document clearly. Please try a different file or a clearer photo.' };
     }
 
     // Step 3: Generate voice summary with the second AI flow
